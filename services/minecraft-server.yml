@@ -1,5 +1,5 @@
 name: minecraft-server
-container: minecraft-server
+container: neoforge-minecraft
 description: A Minecraft server running in Docker
 actions:
   - start

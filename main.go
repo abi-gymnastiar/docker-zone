@@ -17,10 +17,10 @@ import (
 )
 
 type ServiceConfig struct {
-	Name        string   `yaml:"name"`
-	Container   string   `yaml:"container"`
-	Description string   `yaml:"description"`
-	Actions     []string `yaml:"actions"`
+	Name        string   `yaml:"name" json:"name"`
+	Container   string   `yaml:"container" json:"container"`
+	Description string   `yaml:"description" json:"description"`
+	Actions     []string `yaml:"actions" json:"actions"`
 }
 
 type DockerContainer struct {
