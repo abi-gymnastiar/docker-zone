@@ -1,0 +1,2 @@
+button { margin: 6px 6px 0 0; padding: 7px 12px; font: inherit; font-weight: bold; border: 3px outset #fff; background: #c0c0c0; cursor: pointer; }
+button:disabled { color: #777; cursor: not-allowed; }

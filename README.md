@@ -3,6 +3,21 @@
 A small, deliberately old-school dashboard for Docker services. Service metadata and
 available actions live in individual YAML files under [`services/`](./services/).
 
+The backend is organized into:
+
+- `cmd/dashboard`: application entrypoint and environment wiring.
+- `internal/config`: YAML service configuration loading.
+- `internal/domain`: service entities shared by the application layers.
+- `internal/docker`: Docker socket client/repository.
+- `internal/httpapi`: REST handlers and static frontend serving.
+
+The frontend keeps pages, reusable components, and their component styles in
+separate files under [`frontend/src/`](./frontend/src/).
+
+Images and GIFs for the optional evil overlay belong in
+[`frontend/media/`](./frontend/media/). The frontend selects up to four of them
+at random each time the page loads.
+
 ## Run with Docker Compose
 
 The recommended home-server deployment mounts the host Docker socket into the

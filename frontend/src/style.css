@@ -1,12 +1,2 @@
 body { margin: 0; background: #008080; color: #000080; font: 16px "Courier New", monospace; }
-main { width: min(760px, calc(100% - 32px)); margin: 30px auto; }
-header, .panel { background: #c0c0c0; border: 3px outset #fff; padding: 14px; margin-bottom: 18px; }
-h1 { margin: 0 0 10px; color: #ff00ff; text-shadow: 2px 2px #000080; font-size: 30px; }
-h2 { margin-top: 0; background: #000080; color: #fff; padding: 5px; font-size: 18px; }
-a { color: #0000ee; font-weight: bold; }
-.service { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 12px; margin: 8px 0; background: #fff; border: 2px inset #fff; text-decoration: none; }
-.service small { grid-column: 1 / -1; color: #333; }
-.status { font-weight: bold; white-space: nowrap; }.up { color: green; }.down { color: #d00; }
-button { margin: 6px 6px 0 0; padding: 7px 12px; font: inherit; font-weight: bold; border: 3px outset #fff; background: #c0c0c0; cursor: pointer; }
-button:disabled { color: #777; cursor: not-allowed; }.message { color: #fff; font-weight: bold; }
-pre { max-height: 360px; overflow: auto; padding: 10px; color: #0f0; background: #000; white-space: pre-wrap; }
+.message { color: #fff; font-weight: bold; }
