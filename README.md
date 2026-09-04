@@ -9,6 +9,8 @@ The recommended home-server deployment mounts the host Docker socket into the
 dashboard container so it can inspect and manage configured containers:
 
 ```sh
+cp .env.example .env
+# Edit .env if needed, then:
 docker compose up -d --build
 ```
 
@@ -20,6 +22,13 @@ docker compose logs -f
 docker compose ps
 docker compose down
 ```
+
+Compose reads deployment settings from the untracked `.env` file. The available
+settings are documented in [`.env.example`](./.env.example):
+
+- `DASHBOARD_PORT` controls the host port.
+- `LISTEN_ADDR` controls the address inside the container.
+- `DOCKER_SOCKET` sets the host Docker socket path.
 
 The Docker socket grants the dashboard broad control over the host Docker
 daemon. Keep this service on a trusted network and do not expose port 8080

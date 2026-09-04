@@ -3,10 +3,10 @@ services:
     build:
       context: .
     ports:
-      - "8080:8080"
+      - "${DASHBOARD_PORT:-8080}:8080"
     environment:
-      LISTEN_ADDR: ":8080"
-      DOCKER_SOCKET: "/var/run/docker.sock"
+      LISTEN_ADDR: "${LISTEN_ADDR:-:8080}"
+      DOCKER_SOCKET: "${DOCKER_SOCKET:-/var/run/docker.sock}"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     restart: unless-stopped
