@@ -15,8 +15,9 @@ The frontend keeps pages, reusable components, and their component styles in
 separate files under [`frontend/src/`](./frontend/src/).
 
 Images and GIFs for the optional evil overlay belong in
-[`frontend/media/`](./frontend/media/). The frontend selects up to four of them
-at random each time the page loads.
+[`frontend/media/`](./frontend/media/). The frontend selects three of them at
+random each time the page loads and places them around the corners of the
+transparent overlay.
 
 ## Run with Docker Compose
 

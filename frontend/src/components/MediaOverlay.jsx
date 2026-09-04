@@ -8,7 +8,7 @@ const media = Object.values(import.meta.glob('../media/*.{gif,png,jpg,jpeg,webp,
 }))
 
 function shuffled(items) {
-  return [...items].sort(() => Math.random() - 0.5).slice(0, 4)
+  return [...items].sort(() => Math.random() - 0.5).slice(0, 3)
 }
 
 export default function MediaOverlay() {
@@ -20,8 +20,8 @@ export default function MediaOverlay() {
       {open ? 'HIDE EVIL' : 'EVIL BUTTON'}
     </button>
     {open && <div className="media-overlay" role="dialog" aria-label="Evil media overlay">
-      <div className="media-wall">
-        {selectedMedia.map((source, index) => <img src={source} alt="" key={`${source}-${index}`} />)}
+      <div className="media-corners">
+        {selectedMedia.map((source, index) => <img className={`corner-${index}`} src={source} alt="" key={`${source}-${index}`} />)}
         {!selectedMedia.length && <p>Add pictures or GIFs to <code>frontend/src/media/</code> and rebuild.</p>}
       </div>
     </div>}
