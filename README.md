@@ -50,12 +50,6 @@ The Docker socket grants the dashboard broad control over the host Docker
 daemon. Keep this service on a trusted network and do not expose port 8080
 directly to the public internet.
 
-The Compose deployment also starts PostgreSQL. On startup, the backend applies
-[`migrations/001_services.sql`](./migrations/001_services.sql) and synchronizes
-the YAML service definitions into PostgreSQL. Service configuration and action
-records are then read from the database. Set the PostgreSQL values in `.env`;
-use a strong `POSTGRES_PASSWORD` outside local development.
-
 ## Run locally
 
 1. Install Go 1.22+ and Node.js 18+.

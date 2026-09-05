@@ -7,28 +7,6 @@ services:
     environment:
       LISTEN_ADDR: "${LISTEN_ADDR:-:8080}"
       DOCKER_SOCKET: "${DOCKER_SOCKET:-/var/run/docker.sock}"
-      DATABASE_URL: "${DATABASE_URL:-postgres://dashboard:dashboard@postgres:5432/dashboard?sslmode=disable}"
     volumes:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: "${POSTGRES_DB:-dashboard}"
-      POSTGRES_USER: "${POSTGRES_USER:-dashboard}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-dashboard}"
-    volumes:
-      - dashboard-postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-volumes:
-  dashboard-postgres:
