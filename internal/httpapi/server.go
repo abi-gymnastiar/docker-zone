@@ -12,15 +12,16 @@ import (
 
 	"dashboard/internal/docker"
 	"dashboard/internal/domain"
+	"dashboard/internal/repository"
 )
 
 type Server struct {
-	services map[string]domain.ServiceConfig
+	services repository.ServiceRepository
 	docker   *docker.Client
 	static   string
 }
 
-func NewServer(services map[string]domain.ServiceConfig, dockerClient *docker.Client, static string) *Server {
+func NewServer(services repository.ServiceRepository, dockerClient *docker.Client, static string) *Server {
 	return &Server{services: services, docker: dockerClient, static: static}
 }
 
@@ -44,8 +45,13 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make([]domain.Service, 0, len(s.services))
-	for _, config := range s.services {
+	configs, err := s.services.List(r.Context())
+	if err != nil {
+		http.Error(w, "load services: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	result := make([]domain.Service, 0, len(configs))
+	for _, config := range configs {
 		service, err := s.serviceStatus(config)
 		if err != nil {
 			http.Error(w, "docker status unavailable: "+err.Error(), http.StatusBadGateway)
@@ -62,8 +68,8 @@ func (s *Server) handleService(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	config, ok := s.services[parts[2]]
-	if !ok {
+	config, err := s.services.Get(r.Context(), parts[2])
+	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
