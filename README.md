@@ -45,6 +45,13 @@ settings are documented in [`.env.example`](./.env.example):
 - `DASHBOARD_PORT` controls the host port.
 - `LISTEN_ADDR` controls the address inside the container.
 - `DOCKER_SOCKET` sets the host Docker socket path.
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` bootstrap the first administrator.
+- `DATABASE_PATH` sets the SQLite database path inside the container.
+
+The first administrator is created only when the database has no users. Change
+the example password before deploying. Authentication uses server-side sessions
+in secure HTTP-only cookies. Services are protected by group membership and
+role permissions; the Minecraft service belongs to the `minecraft` group.
 
 The Docker socket grants the dashboard broad control over the host Docker
 daemon. Keep this service on a trusted network and do not expose port 8080
@@ -65,6 +72,8 @@ directly to the public internet.
 3. Start the dashboard:
 
    ```sh
+   export ADMIN_USERNAME=admin
+   export ADMIN_PASSWORD=change-this-password
    go run .
    ```
 

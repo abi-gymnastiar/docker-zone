@@ -1,6 +1,8 @@
 name: minecraft-server
 container: neoforge-minecraft
 description: A Minecraft server running in Docker
+groups:
+  - minecraft
 actions:
   - start
   - stop
