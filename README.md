@@ -46,12 +46,28 @@ settings are documented in [`.env.example`](./.env.example):
 - `LISTEN_ADDR` controls the address inside the container.
 - `DOCKER_SOCKET` sets the host Docker socket path.
 - `ADMIN_USERNAME` and `ADMIN_PASSWORD` bootstrap the first administrator.
+- `DATABASE_DIR` sets the host directory containing the SQLite database.
 - `DATABASE_PATH` sets the SQLite database path inside the container.
 
 The first administrator is created only when the database has no users. Change
 the example password before deploying. Authentication uses server-side sessions
 in secure HTTP-only cookies. Services are protected by group membership and
 role permissions; the Minecraft service belongs to the `minecraft` group.
+
+SQLite is an embedded database, not a network database server, so there is no
+database port to expose. The database is stored in `DATABASE_DIR` on the host.
+To inspect it with DBeaver, stop the dashboard first, copy the file to your
+workstation over SSH, and open the copy as a SQLite database:
+
+```sh
+docker compose stop dashboard
+scp your-server:/path/to/project/data/dashboard.db ./dashboard.db
+docker compose start dashboard
+```
+
+Do not edit a live SQLite file from another machine. For a live remote database
+connection, migrate to PostgreSQL later or add a deliberately authenticated
+database administration service instead of exposing the SQLite file.
 
 The Docker socket grants the dashboard broad control over the host Docker
 daemon. Keep this service on a trusted network and do not expose port 8080
@@ -74,7 +90,7 @@ directly to the public internet.
    ```sh
    export ADMIN_USERNAME=admin
    export ADMIN_PASSWORD=change-this-password
-   go run .
+   go run ./cmd/dashboard
    ```
 
 Open <http://localhost:8080>. The process needs permission to access

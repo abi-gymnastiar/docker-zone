@@ -12,7 +12,7 @@ services:
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}"
     volumes:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - dashboard-data:/data
+      - ${DATABASE_DIR:-./data}:/data
     restart: unless-stopped
 
 volumes:
