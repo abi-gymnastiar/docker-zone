@@ -37,6 +37,11 @@ func main() {
 	if err := repo.Bootstrap(adminUsername, adminPassword); err != nil {
 		log.Fatal(err)
 	}
+	for _, service := range services {
+		if err := repo.EnsureGroups(service.Groups); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	socket := os.Getenv("DOCKER_SOCKET")
 	if socket == "" {

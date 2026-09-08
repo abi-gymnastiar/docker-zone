@@ -47,3 +47,20 @@ func (u *UseCase) Current(r *http.Request) (User, error) {
 func (u *UseCase) Allowed(user User, groups []string, permission string) (bool, error) {
 	return u.repo.Allowed(user, groups, permission)
 }
+
+func (u *UseCase) EnsureGroups(names []string) error { return u.repo.EnsureGroups(names) }
+func (u *UseCase) ListUsers() ([]AdminUser, error)   { return u.repo.ListUsers() }
+func (u *UseCase) CreateUser(username, password, role string) error {
+	return u.repo.CreateUser(username, password, role)
+}
+func (u *UseCase) ListGroups() ([]AdminGroup, error) { return u.repo.ListGroups() }
+func (u *UseCase) CreateGroup(name string) error     { return u.repo.CreateGroup(name) }
+func (u *UseCase) SetGroupMember(groupID, userID int64, role string) error {
+	return u.repo.SetGroupMember(groupID, userID, role)
+}
+func (u *UseCase) SetServiceGroups(serviceName string, groups []string) error {
+	return u.repo.SetServiceGroups(serviceName, groups)
+}
+func (u *UseCase) ServiceGroups(serviceName string, defaults []string) ([]string, error) {
+	return u.repo.ServiceGroups(serviceName, defaults)
+}

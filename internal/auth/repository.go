@@ -51,8 +51,147 @@ func (r *Repository) migrate() error {
 			role TEXT NOT NULL DEFAULT 'viewer',
 			PRIMARY KEY (user_id, group_id)
 		);
+		CREATE TABLE IF NOT EXISTS service_groups (
+			service_name TEXT NOT NULL,
+			group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+			PRIMARY KEY (service_name, group_id)
+		);
 	`)
 	return err
+}
+
+func (r *Repository) EnsureGroups(names []string) error {
+	for _, name := range names {
+		if _, err := r.db.Exec("INSERT INTO groups (name) VALUES (?) ON CONFLICT(name) DO NOTHING", name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Repository) ListUsers() ([]AdminUser, error) {
+	rows, err := r.db.Query("SELECT id, username, role FROM users ORDER BY username")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []AdminUser
+	for rows.Next() {
+		var user AdminUser
+		if err := rows.Scan(&user.ID, &user.Username, &user.Role); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, rows.Err()
+}
+
+func (r *Repository) CreateUser(username, password, role string) error {
+	if role != "admin" && role != "viewer" {
+		return errors.New("invalid user role")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", username, hash, role)
+	return err
+}
+
+func (r *Repository) ListGroups() ([]AdminGroup, error) {
+	rows, err := r.db.Query("SELECT id, name FROM groups ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var groups []AdminGroup
+	for rows.Next() {
+		var group AdminGroup
+		if err := rows.Scan(&group.ID, &group.Name); err != nil {
+			return nil, err
+		}
+		group.Members, err = r.groupMembers(group.ID)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, rows.Err()
+}
+
+func (r *Repository) groupMembers(groupID int64) ([]GroupMember, error) {
+	rows, err := r.db.Query(`SELECT u.id, u.username, gm.role FROM group_members gm
+		JOIN users u ON u.id = gm.user_id WHERE gm.group_id = ? ORDER BY u.username`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var members []GroupMember
+	for rows.Next() {
+		var member GroupMember
+		if err := rows.Scan(&member.UserID, &member.Username, &member.Role); err != nil {
+			return nil, err
+		}
+		members = append(members, member)
+	}
+	return members, rows.Err()
+}
+
+func (r *Repository) CreateGroup(name string) error {
+	_, err := r.db.Exec("INSERT INTO groups (name) VALUES (?)", name)
+	return err
+}
+
+func (r *Repository) SetGroupMember(groupID, userID int64, role string) error {
+	if role != "viewer" && role != "log_viewer" && role != "operator" {
+		return errors.New("invalid group role")
+	}
+	_, err := r.db.Exec(`INSERT INTO group_members (user_id, group_id, role) VALUES (?, ?, ?)
+		ON CONFLICT(user_id, group_id) DO UPDATE SET role = excluded.role`, userID, groupID, role)
+	return err
+}
+
+func (r *Repository) SetServiceGroups(serviceName string, groups []string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM service_groups WHERE service_name = ?", serviceName); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	for _, group := range groups {
+		if _, err := tx.Exec(`INSERT INTO service_groups (service_name, group_id)
+			SELECT ?, id FROM groups WHERE name = ?`, serviceName, group); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *Repository) ServiceGroups(serviceName string, defaults []string) ([]string, error) {
+	rows, err := r.db.Query(`SELECT g.name FROM service_groups sg JOIN groups g ON g.id = sg.group_id
+		WHERE sg.service_name = ? ORDER BY g.name`, serviceName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var groups []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		groups = append(groups, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(groups) == 0 {
+		return defaults, nil
+	}
+	return groups, nil
 }
 
 func (r *Repository) Bootstrap(username, password string) error {

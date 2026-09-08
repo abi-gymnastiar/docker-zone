@@ -32,6 +32,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/auth/login", s.handleLogin)
 	mux.HandleFunc("/api/auth/logout", s.handleLogout)
 	mux.HandleFunc("/api/auth/me", s.handleMe)
+	mux.HandleFunc("/api/admin/users", s.handleAdminUsers)
+	mux.HandleFunc("/api/admin/groups", s.handleAdminGroups)
+	mux.HandleFunc("/api/admin/services", s.handleAdminServices)
 	mux.HandleFunc("/api/services", s.handleServices)
 	mux.HandleFunc("/api/services/", s.handleService)
 	mux.HandleFunc("/", s.handleFrontend)
@@ -102,7 +105,12 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 	}
 	result := make([]domain.Service, 0, len(s.services))
 	for _, config := range s.services {
-		allowed, err := s.auth.Allowed(user, config.Groups, "services:view")
+		groups, err := s.groupsFor(config)
+		if err != nil {
+			http.Error(w, "service groups unavailable", http.StatusInternalServerError)
+			return
+		}
+		allowed, err := s.auth.Allowed(user, groups, "services:view")
 		if err != nil {
 			http.Error(w, "authorization unavailable", http.StatusInternalServerError)
 			return
@@ -199,7 +207,12 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request, config dom
 }
 
 func (s *Server) requirePermission(w http.ResponseWriter, user auth.User, config domain.ServiceConfig, permission string) bool {
-	allowed, err := s.auth.Allowed(user, config.Groups, permission)
+	groups, err := s.groupsFor(config)
+	if err != nil {
+		http.Error(w, "service groups unavailable", http.StatusInternalServerError)
+		return false
+	}
+	allowed, err := s.auth.Allowed(user, groups, permission)
 	if err != nil {
 		http.Error(w, "authorization unavailable", http.StatusInternalServerError)
 		return false
@@ -209,6 +222,132 @@ func (s *Server) requirePermission(w http.ResponseWriter, user auth.User, config
 		return false
 	}
 	return true
+}
+
+func (s *Server) groupsFor(config domain.ServiceConfig) ([]string, error) {
+	return s.auth.ServiceGroups(config.Name, config.Groups)
+}
+
+func (s *Server) adminUser(r *http.Request) (auth.User, bool) {
+	user, err := s.auth.Current(r)
+	return user, err == nil && user.Role == "admin"
+}
+
+func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.adminUser(r)
+	if !ok {
+		http.Error(w, "admin access required", http.StatusForbidden)
+		return
+	}
+	_ = user
+	switch r.Method {
+	case http.MethodGet:
+		users, err := s.auth.ListUsers()
+		if err != nil {
+			http.Error(w, "could not list users", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, users)
+	case http.MethodPost:
+		var input struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Role     string `json:"role"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input.Username == "" || input.Password == "" {
+			http.Error(w, "username and password are required", http.StatusBadRequest)
+			return
+		}
+		if input.Role == "" {
+			input.Role = "viewer"
+		}
+		if err := s.auth.CreateUser(input.Username, input.Password, input.Role); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *Server) handleAdminGroups(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.adminUser(r); !ok {
+		http.Error(w, "admin access required", http.StatusForbidden)
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		groups, err := s.auth.ListGroups()
+		if err != nil {
+			http.Error(w, "could not list groups", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, groups)
+	case http.MethodPost:
+		var input struct {
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input.Name == "" {
+			http.Error(w, "group name is required", http.StatusBadRequest)
+			return
+		}
+		if err := s.auth.CreateGroup(input.Name); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	case http.MethodPut:
+		var input struct {
+			GroupID int64  `json:"groupId"`
+			UserID  int64  `json:"userId"`
+			Role    string `json:"role"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid membership", http.StatusBadRequest)
+			return
+		}
+		if err := s.auth.SetGroupMember(input.GroupID, input.UserID, input.Role); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.adminUser(r); !ok {
+		http.Error(w, "admin access required", http.StatusForbidden)
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		result := make([]auth.ServiceGroups, 0, len(s.services))
+		for _, service := range s.services {
+			groups, err := s.groupsFor(service)
+			if err != nil {
+				http.Error(w, "could not list service groups", http.StatusInternalServerError)
+				return
+			}
+			result = append(result, auth.ServiceGroups{Name: service.Name, Groups: groups})
+		}
+		writeJSON(w, result)
+	case http.MethodPut:
+		var input auth.ServiceGroups
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil || s.services[input.Name].Name == "" {
+			http.Error(w, "invalid service groups", http.StatusBadRequest)
+			return
+		}
+		if err := s.auth.SetServiceGroups(input.Name, input.Groups); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.NotFound(w, r)
+	}
 }
 
 func unauthorized(w http.ResponseWriter) {

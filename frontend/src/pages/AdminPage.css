@@ -1,0 +1,6 @@
+.admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.admin-grid form, .inline-form { display: grid; gap: 8px; }
+.admin-grid input, .admin-grid select, .inline-form select, .service-assignment input { box-sizing: border-box; padding: 7px; font: inherit; border: 2px inset #fff; }
+.inline-form { grid-template-columns: repeat(4, 1fr); }
+.service-assignment { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; align-items: center; margin: 8px 0; }
+@media (max-width: 650px) { .admin-grid, .inline-form { grid-template-columns: 1fr; } }

@@ -54,6 +54,11 @@ the example password before deploying. Authentication uses server-side sessions
 in secure HTTP-only cookies. Services are protected by group membership and
 role permissions; the Minecraft service belongs to the `minecraft` group.
 
+Administrators can open `/admin` to create users and groups, assign users to
+groups with `viewer`, `log_viewer`, or `operator` roles, and assign services to
+groups. Service assignments are stored in SQLite; YAML groups provide the
+initial defaults.
+
 SQLite is an embedded database, not a network database server, so there is no
 database port to expose. The database is stored in `DATABASE_DIR` on the host.
 To inspect it with DBeaver, stop the dashboard first, copy the file to your
