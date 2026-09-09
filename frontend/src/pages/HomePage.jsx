@@ -19,11 +19,18 @@ export default function HomePage({ services, message, user, onLogout, page, page
       }
     }).catch(() => {})
   }, [])
-  useEffect(() => { localStorage.setItem('dashboard-favorites', JSON.stringify(favorites)) }, [favorites])
-  const toggleFavorite = name => setFavorites(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name])
+  useEffect(() => {
+    const syncFavorites = () => setFavorites(JSON.parse(localStorage.getItem('dashboard-favorites') || '[]'))
+    window.addEventListener('dashboard-favorites-change', syncFavorites)
+    window.addEventListener('storage', syncFavorites)
+    return () => {
+      window.removeEventListener('dashboard-favorites-change', syncFavorites)
+      window.removeEventListener('storage', syncFavorites)
+    }
+  }, [])
   const favoriteServices = services.filter(service => favorites.includes(service.name))
   const regularServices = services.filter(service => !favorites.includes(service.name))
-  const card = service => <ServiceCard service={service} favorite={favorites.includes(service.name)} onToggleFavorite={toggleFavorite} key={service.name} />
+  const card = service => <ServiceCard service={service} key={service.name} />
   const updateImages = value => setBackground({ ...background, images: value.split(',').map(item => item.trim()).filter(Boolean) })
   const web = config?.web || {}
   return <Layout>
