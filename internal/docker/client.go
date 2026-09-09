@@ -19,6 +19,11 @@ type Client struct {
 type container struct {
 	ID    string   `json:"Id"`
 	Names []string `json:"Names"`
+	State string   `json:"State"`
+}
+
+type inspectedContainer struct {
+	ID    string `json:"Id"`
 	State struct {
 		Status  string `json:"Status"`
 		Running bool   `json:"Running"`
@@ -48,7 +53,7 @@ func (c *Client) Discover() ([]domain.DiscoveredService, error) {
 		result = append(result, domain.DiscoveredService{
 			ContainerID: item.ID, Container: containerName, Name: containerName,
 			Actions: []string{"start", "stop", "restart"},
-			Running: item.State.Running, Status: item.State.Status,
+			Running: item.State == "running", Status: item.State,
 		})
 	}
 	return result, nil
@@ -92,7 +97,7 @@ func (c *Client) Status(name string) (Status, error) {
 		return Status{}, fmt.Errorf("container %q returned HTTP %d", name, resp.StatusCode)
 	}
 
-	var result container
+	var result inspectedContainer
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return Status{}, fmt.Errorf("decode container status: %w", err)
 	}
