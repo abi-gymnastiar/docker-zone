@@ -1,4 +1,4 @@
-import Layout from '../components/Layout'
+import Layout, { useBackground } from '../components/Layout'
 import ServiceCard from '../components/ServiceCard'
 import Pagination from '../components/Pagination'
 
@@ -9,13 +9,7 @@ import './HomePage.css'
 export default function HomePage({ services, message, user, onLogout, page, pageSize, total, search, setSearch, onPageChange }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [config, setConfig] = useState(null)
-  const [background, setBackground] = useState(() => JSON.parse(localStorage.getItem('dashboard-background') || '{"color":"#008080","images":[]}'))
-  useEffect(() => {
-    document.body.style.backgroundColor = background.color || '#008080'
-    document.body.style.backgroundImage = background.images?.length ? `url("${background.images.join('"), url("')}")` : ''
-    localStorage.setItem('dashboard-background', JSON.stringify(background))
-    return () => { document.body.style.backgroundImage = ''; document.body.style.backgroundColor = '' }
-  }, [background])
+  const [background, setBackground] = useBackground()
   useEffect(() => { api('/config').then(setConfig).catch(() => {}) }, [])
   const updateImages = value => setBackground({ ...background, images: value.split(',').map(item => item.trim()).filter(Boolean) })
   const web = config?.web || {}
@@ -27,6 +21,6 @@ export default function HomePage({ services, message, user, onLogout, page, page
       <Pagination page={page} pageSize={pageSize} total={total} onChange={onPageChange} />
     </section>
     <p className="message">{message}</p>
-    {settingsOpen && <div className="settings-modal"><div className="settings-box"><h2>BACKGROUND SETTINGS</h2><label>Color <input type="color" value={background.color} onChange={event => setBackground({ ...background, color: event.target.value })} /></label><label>Image URLs (comma separated) <input value={background.images.join(', ')} onChange={event => updateImages(event.target.value)} /></label><button onClick={() => setSettingsOpen(false)}>CLOSE</button></div></div>}
+    {settingsOpen && <div className="settings-modal"><div className="settings-box"><h2>BACKGROUND SETTINGS</h2><label>Color <input type="color" value={background.color} onChange={event => setBackground({ ...background, color: event.target.value })} /></label><label>Image URLs (comma separated) <input value={background.images.join(', ')} onChange={event => updateImages(event.target.value)} /></label><label>Image scaling <select value={background.scale || 'tile'} onChange={event => setBackground({ ...background, scale: event.target.value })}><option value="tile">Tile</option><option value="stretch">Stretch</option><option value="zoom">Zoom to fill</option></select></label><button onClick={() => setSettingsOpen(false)}>CLOSE</button></div></div>}
   </Layout>
 }

@@ -3,7 +3,47 @@ import MediaOverlay from './MediaOverlay'
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
+export function useBackground() {
+  const [background, setBackgroundState] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('dashboard-background')) || { color: '#008080', images: [], scale: 'tile' }
+    } catch {
+      return { color: '#008080', images: [], scale: 'tile' }
+    }
+  })
+  const setBackground = value => {
+    setBackgroundState(value)
+    localStorage.setItem('dashboard-background', JSON.stringify(value))
+    window.dispatchEvent(new Event('dashboard-background-change'))
+  }
+  useEffect(() => {
+    const sync = () => {
+      try {
+        setBackgroundState(JSON.parse(localStorage.getItem('dashboard-background')) || { color: '#008080', images: [], scale: 'tile' })
+      } catch {
+        // Keep the last valid preference when storage contains invalid JSON.
+      }
+    }
+    window.addEventListener('dashboard-background-change', sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener('dashboard-background-change', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+  useEffect(() => {
+    document.body.style.backgroundColor = background.color || '#008080'
+    document.body.style.backgroundImage = background.images?.length
+      ? `url("${background.images.join('"), url("')}")`
+      : ''
+    document.body.style.backgroundRepeat = background.scale === 'tile' ? 'repeat' : 'no-repeat'
+    document.body.style.backgroundSize = background.scale === 'stretch' ? '100% 100%' : background.scale === 'zoom' ? 'cover' : 'auto'
+  }, [background])
+  return [background, setBackground]
+}
+
 export default function Layout({ children }) {
+  useBackground()
   const [config, setConfig] = useState(null)
   useEffect(() => {
     let active = true

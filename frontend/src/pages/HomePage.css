@@ -2,3 +2,4 @@
 .settings-box { width: min(520px, calc(100% - 36px)); padding: 16px; background: #c0c0c0; border: 3px outset #fff; }
 .settings-box label { display: block; margin: 12px 0; }
 .settings-box input[type="text"], .settings-box label input:not([type="color"]) { width: 100%; box-sizing: border-box; padding: 7px; font: inherit; }
+.settings-box select { width: 100%; box-sizing: border-box; padding: 7px; font: inherit; }

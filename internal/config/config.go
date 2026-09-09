@@ -45,10 +45,19 @@ func New(path string) (*Manager, error) {
 		if marshalErr != nil {
 			return nil, marshalErr
 		}
+		data = append(data, []byte(`
+# Optional evil overlay. Uncomment and edit to show the EVIL BUTTON.
+# evil:
+#   images:
+#     - https://example.com/evil.gif
+#     - /data/evil/local-image.png
+`)...)
 		if err := os.WriteFile(path, data, 0640); err != nil {
 			return nil, err
 		}
 	} else if err != nil {
+		return nil, err
+	} else if err := appendTemplateIfMissing(path); err != nil {
 		return nil, err
 	}
 	manager := &Manager{path: path}
@@ -56,6 +65,24 @@ func New(path string) (*Manager, error) {
 		return nil, err
 	}
 	return manager, nil
+}
+
+func appendTemplateIfMissing(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if strings.Contains(string(data), "# Optional evil overlay.") {
+		return nil
+	}
+	data = append(data, []byte(`
+# Optional evil overlay. Uncomment and edit to show the EVIL BUTTON.
+# evil:
+#   images:
+#     - https://example.com/evil.gif
+#     - /data/evil/local-image.png
+`)...)
+	return os.WriteFile(path, data, 0640)
 }
 
 func (m *Manager) Current() (Config, error) {
