@@ -37,7 +37,8 @@ export function useBackground() {
       ? `url("${background.images.join('"), url("')}")`
       : ''
     document.body.style.backgroundRepeat = background.scale === 'tile' ? 'repeat' : 'no-repeat'
-    document.body.style.backgroundSize = background.scale === 'stretch' ? '100% 100%' : background.scale === 'zoom' ? 'cover' : 'auto'
+    document.body.style.backgroundAttachment = 'fixed'
+    document.body.style.backgroundSize = background.scale === 'stretch' ? '100vw 100vh' : background.scale === 'zoom' ? 'cover' : 'auto'
   }, [background])
   return [background, setBackground]
 }

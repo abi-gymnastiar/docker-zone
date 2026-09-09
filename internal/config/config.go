@@ -12,20 +12,20 @@ import (
 )
 
 type Web struct {
-	Title     string `yaml:"title"`
-	Icon      string `yaml:"icon"`
-	Header    string `yaml:"header"`
-	Subheader string `yaml:"subheader"`
-	Footer    string `yaml:"footer"`
+	Title     string `yaml:"title" json:"title"`
+	Icon      string `yaml:"icon" json:"icon"`
+	Header    string `yaml:"header" json:"header"`
+	Subheader string `yaml:"subheader" json:"subheader"`
+	Footer    string `yaml:"footer" json:"footer"`
 }
 
 type Evil struct {
-	Images []string `yaml:"images"`
+	Images []string `yaml:"images" json:"images"`
 }
 
 type Config struct {
-	Web  Web   `yaml:"web"`
-	Evil *Evil `yaml:"evil,omitempty"`
+	Web  Web   `yaml:"web" json:"web"`
+	Evil *Evil `yaml:"evil,omitempty" json:"evil,omitempty"`
 }
 
 type Manager struct {
