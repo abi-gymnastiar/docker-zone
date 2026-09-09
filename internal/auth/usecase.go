@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
+
+	"dashboard/internal/domain"
 )
 
 const sessionCookie = "dashboard_session"
@@ -63,4 +65,45 @@ func (u *UseCase) SetServiceGroups(serviceName string, groups []string) error {
 }
 func (u *UseCase) ServiceGroups(serviceName string, defaults []string) ([]string, error) {
 	return u.repo.ServiceGroups(serviceName, defaults)
+}
+func (u *UseCase) SetServiceMetadata(name, description string, enabled bool, actions []string) error {
+	return u.repo.SetServiceMetadata(name, description, enabled, actions)
+}
+func (u *UseCase) UpsertService(service domain.ServiceConfig, containerID string, orphaned bool) error {
+	return u.repo.UpsertService(service, containerID, orphaned)
+}
+func (u *UseCase) ListServices() ([]domain.ServiceConfig, error) { return u.repo.ListServices() }
+func (u *UseCase) SyncServices(discovered []domain.DiscoveredService) error {
+	if err := u.repo.EnsureGroups(discoveredGroups(discovered)); err != nil {
+		return err
+	}
+	if err := u.repo.SyncServices(discovered); err != nil {
+		return err
+	}
+	for _, service := range discovered {
+		groups, err := u.repo.ServiceGroups(service.Name, nil)
+		if err != nil {
+			return err
+		}
+		if len(groups) == 0 && len(service.Groups) > 0 {
+			if err := u.repo.SetServiceGroups(service.Name, service.Groups); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func discoveredGroups(services []domain.DiscoveredService) []string {
+	seen := map[string]bool{}
+	var groups []string
+	for _, service := range services {
+		for _, group := range service.Groups {
+			if !seen[group] {
+				seen[group] = true
+				groups = append(groups, group)
+			}
+		}
+	}
+	return groups
 }

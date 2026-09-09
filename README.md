@@ -1,7 +1,6 @@
 # My Docker Zone
 
-A small, deliberately old-school dashboard for Docker services. Service metadata and
-available actions live in individual YAML files under [`services/`](./services/).
+A small, deliberately old-school dashboard for Docker services. Service metadata is managed by administrators and stored in SQLite.
 
 The backend is organized into:
 
@@ -58,6 +57,11 @@ Administrators can open `/admin` to create users and groups, assign users to
 groups with `viewer`, `log_viewer`, or `operator` roles, and assign services to
 groups. Service assignments are stored in SQLite; YAML groups provide the
 initial defaults.
+
+The dashboard discovers all Docker containers, including stopped containers.
+Newly discovered containers are disabled for regular users until an admin
+configures them. The `SYNC DOCKER SERVICES` button and startup synchronization
+refresh the catalog. Removed containers remain as orphaned SQLite records.
 
 SQLite is an embedded database, not a network database server, so there is no
 database port to expose. The database is stored in `DATABASE_DIR` on the host.

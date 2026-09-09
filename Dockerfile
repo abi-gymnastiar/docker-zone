@@ -18,7 +18,6 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=backend /dashboard ./dashboard
 COPY --from=frontend /src/frontend/dist ./frontend/dist
-COPY services ./services
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --spider --quiet http://127.0.0.1:8080/healthz || exit 1

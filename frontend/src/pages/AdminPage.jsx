@@ -39,10 +39,17 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
   }
   const saveServiceGroups = (service, value) => {
     const groups = value.split(',').map((group) => group.trim()).filter(Boolean)
-    api('/admin/services', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: service.name, groups }) })
+    api('/admin/services', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: service.name, groups, description: service.description, enabled: service.enabled, actions: service.actions }) })
       .then(() => { setMessage('Service groups saved.'); return refresh() })
       .catch((error) => setMessage(error.message))
   }
+  const saveService = (service, changes) => api('/admin/services', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...service, ...changes }),
+  }).then(() => { setMessage('Service settings saved.'); return refresh() }).catch((error) => setMessage(error.message))
+  const syncServices = () => api('/admin/sync', { method: 'POST' })
+    .then(() => { setMessage('Docker services synchronized.'); return refresh() })
+    .catch((error) => setMessage(error.message))
 
   return <Layout>
     <header><a href="/">◄ BACK TO CONTROL PANEL</a><h1>★ ADMIN MACHINE ★</h1><p>logged in as {user.username} <button onClick={onLogout}>LOG OUT</button></p></header>
@@ -61,7 +68,13 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
       <select value={membership.role} onChange={(event) => setMembership({ ...membership, role: event.target.value })}><option>viewer</option><option>log_viewer</option><option>operator</option></select>
       <button>SAVE MEMBER</button>
     </form>{data.groups.map((group) => <p key={group.id}><b>{group.name}:</b> {group.members?.map((member) => `${member.username} (${member.role})`).join(', ') || 'empty'}</p>)}</section>
-    <section className="panel"><h2>SERVICE GROUP ASSIGNMENTS</h2>{data.services.map((service) => <div className="service-assignment" key={service.name}><b>{service.name}</b><input defaultValue={service.groups.join(', ')} placeholder="group-one, group-two" onBlur={(event) => saveServiceGroups(service, event.target.value)} /></div>)}</section>
+    <section className="panel"><h2>SERVICE CATALOG</h2><button onClick={syncServices}>SYNC DOCKER SERVICES</button>{data.services.map((service) => <div className="service-assignment" key={service.name}>
+      <b>{service.name}</b><small>{service.container} {service.orphaned && '(ORPHANED)'}</small>
+      <input defaultValue={service.description} placeholder="description" onBlur={(event) => saveService(service, { description: event.target.value })} />
+      <input defaultValue={service.groups.join(', ')} placeholder="group-one, group-two" onBlur={(event) => saveServiceGroups(service, event.target.value)} />
+      <label><input type="checkbox" defaultChecked={service.enabled} onChange={(event) => saveService(service, { enabled: event.target.checked })} /> ENABLE FOR USERS</label>
+      <small>Actions: {service.actions.join(', ')}</small>
+    </div>)}</section>
     <p className="message">{message}</p>
   </Layout>
 }

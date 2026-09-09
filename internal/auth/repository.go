@@ -6,8 +6,10 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
+	"dashboard/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 )
@@ -56,8 +58,105 @@ func (r *Repository) migrate() error {
 			group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
 			PRIMARY KEY (service_name, group_id)
 		);
+		CREATE TABLE IF NOT EXISTS services (
+			name TEXT PRIMARY KEY,
+			container TEXT NOT NULL,
+			container_id TEXT NOT NULL DEFAULT '',
+			description TEXT NOT NULL DEFAULT '',
+			actions TEXT NOT NULL DEFAULT 'start,stop,restart',
+			orphaned INTEGER NOT NULL DEFAULT 0,
+			enabled INTEGER NOT NULL DEFAULT 0
+		);
 	`)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec("ALTER TABLE services ADD COLUMN enabled INTEGER NOT NULL DEFAULT 0")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UpsertService(service domain.ServiceConfig, containerID string, orphaned bool) error {
+	_, err := r.db.Exec(`INSERT INTO services (name, container, container_id, description, actions, orphaned, enabled)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(name) DO UPDATE SET container=excluded.container, container_id=excluded.container_id,
+		orphaned=excluded.orphaned`,
+		service.Name, service.Container, containerID, service.Description, strings.Join(service.Actions, ","), boolInt(orphaned), boolInt(service.Enabled))
 	return err
+}
+
+func (r *Repository) ListServices() ([]domain.ServiceConfig, error) {
+	rows, err := r.db.Query("SELECT name, container, container_id, description, actions, orphaned, enabled FROM services ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var services []domain.ServiceConfig
+	for rows.Next() {
+		var service domain.ServiceConfig
+		var actions string
+		var orphaned, enabled int
+		if err := rows.Scan(&service.Name, &service.Container, &service.ContainerID, &service.Description, &actions, &orphaned, &enabled); err != nil {
+			return nil, err
+		}
+		service.Actions = splitCSV(actions)
+		service.Orphaned = orphaned == 1
+		service.Enabled = enabled == 1
+		service.Groups, err = r.ServiceGroups(service.Name, nil)
+		if err != nil {
+			return nil, err
+		}
+		services = append(services, service)
+	}
+	return services, rows.Err()
+}
+
+func (r *Repository) SyncServices(discovered []domain.DiscoveredService) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec("UPDATE services SET orphaned = 1"); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	for _, item := range discovered {
+		actions := strings.Join(item.Actions, ",")
+		if _, err := tx.Exec(`INSERT INTO services (name, container, container_id, description, actions, orphaned, enabled)
+			VALUES (?, ?, ?, ?, ?, 0, 0)
+			ON CONFLICT(name) DO UPDATE SET container=excluded.container, container_id=excluded.container_id,
+			orphaned=0`,
+			item.Name, item.Container, item.ContainerID, item.Description, actions); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *Repository) SetServiceMetadata(name, description string, enabled bool, actions []string) error {
+	_, err := r.db.Exec("UPDATE services SET description = ?, enabled = ?, actions = ? WHERE name = ?",
+		description, boolInt(enabled), strings.Join(actions, ","), name)
+	return err
+}
+
+func boolInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func splitCSV(value string) []string {
+	var result []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 func (r *Repository) EnsureGroups(names []string) error {

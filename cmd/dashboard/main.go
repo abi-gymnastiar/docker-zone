@@ -7,16 +7,12 @@ import (
 	"path/filepath"
 
 	"dashboard/internal/auth"
-	"dashboard/internal/config"
 	"dashboard/internal/docker"
+	"dashboard/internal/domain"
 	"dashboard/internal/httpapi"
 )
 
 func main() {
-	services, err := config.LoadServices("services")
-	if err != nil {
-		log.Fatal(err)
-	}
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
 		dbPath = "/data/dashboard.db"
@@ -37,18 +33,28 @@ func main() {
 	if err := repo.Bootstrap(adminUsername, adminPassword); err != nil {
 		log.Fatal(err)
 	}
-	for _, service := range services {
-		if err := repo.EnsureGroups(service.Groups); err != nil {
-			log.Fatal(err)
-		}
-	}
 
 	socket := os.Getenv("DOCKER_SOCKET")
 	if socket == "" {
 		socket = "/var/run/docker.sock"
 	}
 
-	server := httpapi.NewServer(services, docker.NewClient(socket), auth.NewUseCase(repo), "frontend/dist")
+	dockerClient := docker.NewClient(socket)
+	authUseCase := auth.NewUseCase(repo)
+	if discovered, err := dockerClient.Discover(); err != nil {
+		log.Printf("docker discovery skipped: %v", err)
+	} else if err := authUseCase.SyncServices(discovered); err != nil {
+		log.Fatal(err)
+	}
+	storedServices, err := authUseCase.ListServices()
+	if err != nil {
+		log.Fatal(err)
+	}
+	services := make(map[string]domain.ServiceConfig, len(storedServices))
+	for _, service := range storedServices {
+		services[service.Name] = service
+	}
+	server := httpapi.NewServer(services, dockerClient, authUseCase, "frontend/dist")
 	addr := os.Getenv("LISTEN_ADDR")
 	if addr == "" {
 		addr = ":8080"

@@ -7,6 +7,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
+
+	"dashboard/internal/domain"
 )
 
 type Client struct {
@@ -14,11 +17,48 @@ type Client struct {
 }
 
 type container struct {
-	ID    string `json:"Id"`
+	ID    string   `json:"Id"`
+	Names []string `json:"Names"`
 	State struct {
 		Status  string `json:"Status"`
 		Running bool   `json:"Running"`
 	} `json:"State"`
+}
+
+func (c *Client) Discover() ([]domain.DiscoveredService, error) {
+	req, err := http.NewRequest(http.MethodGet, "http://docker/containers/json?all=true", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("list containers returned HTTP %d", resp.StatusCode)
+	}
+	var containers []container
+	if err := json.NewDecoder(resp.Body).Decode(&containers); err != nil {
+		return nil, fmt.Errorf("decode container list: %w", err)
+	}
+	var result []domain.DiscoveredService
+	for _, item := range containers {
+		containerName := strings.TrimPrefix(first(item.Names), "/")
+		result = append(result, domain.DiscoveredService{
+			ContainerID: item.ID, Container: containerName, Name: containerName,
+			Actions: []string{"start", "stop", "restart"},
+			Running: item.State.Running, Status: item.State.Status,
+		})
+	}
+	return result, nil
+}
+
+func first(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
 }
 
 type Status struct {
@@ -64,5 +104,6 @@ func (c *Client) Proxy(method, endpoint string, body io.Reader) (*http.Response,
 	if err != nil {
 		return nil, err
 	}
+
 	return c.http.Do(req)
 }

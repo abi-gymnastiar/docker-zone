@@ -35,6 +35,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/admin/users", s.handleAdminUsers)
 	mux.HandleFunc("/api/admin/groups", s.handleAdminGroups)
 	mux.HandleFunc("/api/admin/services", s.handleAdminServices)
+	mux.HandleFunc("/api/admin/sync", s.handleAdminSync)
 	mux.HandleFunc("/api/services", s.handleServices)
 	mux.HandleFunc("/api/services/", s.handleService)
 	mux.HandleFunc("/", s.handleFrontend)
@@ -105,6 +106,9 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 	}
 	result := make([]domain.Service, 0, len(s.services))
 	for _, config := range s.services {
+		if !config.Enabled && user.Role != "admin" {
+			continue
+		}
 		groups, err := s.groupsFor(config)
 		if err != nil {
 			http.Error(w, "service groups unavailable", http.StatusInternalServerError)
@@ -322,6 +326,7 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "admin access required", http.StatusForbidden)
 		return
 	}
+
 	switch r.Method {
 	case http.MethodGet:
 		result := make([]auth.ServiceGroups, 0, len(s.services))
@@ -331,11 +336,17 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "could not list service groups", http.StatusInternalServerError)
 				return
 			}
-			result = append(result, auth.ServiceGroups{Name: service.Name, Groups: groups})
+			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, Description: service.Description, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
 		}
 		writeJSON(w, result)
 	case http.MethodPut:
-		var input auth.ServiceGroups
+		var input struct {
+			Name        string   `json:"name"`
+			Groups      []string `json:"groups"`
+			Description string   `json:"description"`
+			Enabled     bool     `json:"enabled"`
+			Actions     []string `json:"actions"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil || s.services[input.Name].Name == "" {
 			http.Error(w, "invalid service groups", http.StatusBadRequest)
 			return
@@ -344,10 +355,49 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if err := s.auth.SetServiceMetadata(input.Name, input.Description, input.Enabled, input.Actions); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (s *Server) handleAdminSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.NotFound(w, r)
+		return
+	}
+	if _, ok := s.adminUser(r); !ok {
+		http.Error(w, "admin access required", http.StatusForbidden)
+		return
+	}
+	if err := s.syncServices(); err != nil {
+		http.Error(w, "docker sync failed: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) syncServices() error {
+	discovered, err := s.docker.Discover()
+	if err != nil {
+		return err
+	}
+	if err := s.auth.SyncServices(discovered); err != nil {
+		return err
+	}
+	services, err := s.auth.ListServices()
+	if err != nil {
+		return err
+	}
+	s.services = make(map[string]domain.ServiceConfig, len(services))
+	for _, service := range services {
+		s.services[service.Name] = service
+	}
+	return nil
 }
 
 func unauthorized(w http.ResponseWriter) {

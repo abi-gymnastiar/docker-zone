@@ -30,6 +30,11 @@ type GroupMember struct {
 }
 
 type ServiceGroups struct {
-	Name   string   `json:"name"`
-	Groups []string `json:"groups"`
+	Name        string   `json:"name"`
+	Container   string   `json:"container"`
+	Description string   `json:"description"`
+	Actions     []string `json:"actions"`
+	Groups      []string `json:"groups"`
+	Enabled     bool     `json:"enabled"`
+	Orphaned    bool     `json:"orphaned"`
 }
