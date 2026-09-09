@@ -34,6 +34,7 @@ type ServiceGroups struct {
 	Container   string   `json:"container"`
 	ContainerID string   `json:"containerId"`
 	Description string   `json:"description"`
+	IconURL     string   `json:"iconUrl"`
 	Actions     []string `json:"actions"`
 	Groups      []string `json:"groups"`
 	Enabled     bool     `json:"enabled"`

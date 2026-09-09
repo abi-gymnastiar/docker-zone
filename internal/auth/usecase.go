@@ -66,8 +66,8 @@ func (u *UseCase) SetServiceGroups(serviceName string, groups []string) error {
 func (u *UseCase) ServiceGroups(serviceName string, defaults []string) ([]string, error) {
 	return u.repo.ServiceGroups(serviceName, defaults)
 }
-func (u *UseCase) SetServiceMetadata(name, description string, enabled bool, actions []string) error {
-	return u.repo.SetServiceMetadata(name, description, enabled, actions)
+func (u *UseCase) SetServiceMetadata(name, description, iconURL string, enabled bool, actions []string) error {
+	return u.repo.SetServiceMetadata(name, description, iconURL, enabled, actions)
 }
 func (u *UseCase) UpsertService(service domain.ServiceConfig, containerID string, orphaned bool) error {
 	return u.repo.UpsertService(service, containerID, orphaned)

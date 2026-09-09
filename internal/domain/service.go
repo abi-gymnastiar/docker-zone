@@ -5,6 +5,7 @@ type ServiceConfig struct {
 	Container   string   `yaml:"container" json:"container"`
 	ContainerID string   `json:"containerId"`
 	Description string   `yaml:"description" json:"description"`
+	IconURL     string   `json:"iconUrl"`
 	Groups      []string `yaml:"groups" json:"groups"`
 	Actions     []string `yaml:"actions" json:"actions"`
 	Enabled     bool     `json:"enabled"`

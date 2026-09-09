@@ -66,12 +66,17 @@ func (r *Repository) migrate() error {
 			actions TEXT NOT NULL DEFAULT 'start,stop,restart',
 			orphaned INTEGER NOT NULL DEFAULT 0,
 			enabled INTEGER NOT NULL DEFAULT 0
+			,icon_url TEXT NOT NULL DEFAULT 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg'
 		);
 	`)
 	if err != nil {
 		return err
 	}
 	_, err = r.db.Exec("ALTER TABLE services ADD COLUMN enabled INTEGER NOT NULL DEFAULT 0")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return err
+	}
+	_, err = r.db.Exec("ALTER TABLE services ADD COLUMN icon_url TEXT NOT NULL DEFAULT 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg'")
 	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
 		return err
 	}
@@ -88,7 +93,7 @@ func (r *Repository) UpsertService(service domain.ServiceConfig, containerID str
 }
 
 func (r *Repository) ListServices() ([]domain.ServiceConfig, error) {
-	rows, err := r.db.Query("SELECT name, container, container_id, description, actions, orphaned, enabled FROM services ORDER BY name")
+	rows, err := r.db.Query("SELECT name, container, container_id, description, actions, orphaned, enabled, icon_url FROM services ORDER BY name")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +103,7 @@ func (r *Repository) ListServices() ([]domain.ServiceConfig, error) {
 		var service domain.ServiceConfig
 		var actions string
 		var orphaned, enabled int
-		if err := rows.Scan(&service.Name, &service.Container, &service.ContainerID, &service.Description, &actions, &orphaned, &enabled); err != nil {
+		if err := rows.Scan(&service.Name, &service.Container, &service.ContainerID, &service.Description, &actions, &orphaned, &enabled, &service.IconURL); err != nil {
 			return nil, err
 		}
 		service.Actions = splitCSV(actions)
@@ -136,9 +141,9 @@ func (r *Repository) SyncServices(discovered []domain.DiscoveredService) error {
 	return tx.Commit()
 }
 
-func (r *Repository) SetServiceMetadata(name, description string, enabled bool, actions []string) error {
-	_, err := r.db.Exec("UPDATE services SET description = ?, enabled = ?, actions = ? WHERE name = ?",
-		description, boolInt(enabled), strings.Join(actions, ","), name)
+func (r *Repository) SetServiceMetadata(name, description, iconURL string, enabled bool, actions []string) error {
+	_, err := r.db.Exec("UPDATE services SET description = ?, icon_url = ?, enabled = ?, actions = ? WHERE name = ?",
+		description, iconURL, boolInt(enabled), strings.Join(actions, ","), name)
 	return err
 }
 

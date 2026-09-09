@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import Status from '../components/Status'
 import './ServicePage.css'
 
-export default function ServicePage({ service, serviceName, onRefresh, message, setMessage, setService }) {
+export default function ServicePage({ service, serviceName, user, onRefresh, message, setMessage, setService }) {
   const [logs, setLogs] = useState('')
   const runAction = (action) => {
     setMessage(`Running ${action}...`)
@@ -22,7 +22,7 @@ export default function ServicePage({ service, serviceName, onRefresh, message, 
   const loadLogs = () => getLogs(serviceName).then(setLogs).catch((error) => setMessage(error.message))
 
   return <Layout>
-    <header><a href="/">◄ BACK TO CONTROL PANEL</a><h1>{service?.name || serviceName}</h1></header>
+    <header><a href="/">◄ BACK TO CONTROL PANEL</a>{user?.role === 'admin' && <a className="admin-link" href={`/admin?service=${encodeURIComponent(serviceName)}`}>CONFIGURE CONTAINER</a>}<h1>{service?.name || serviceName}</h1></header>
     <section className="panel"><h2>CONTAINER STATUS</h2>
       {service ? <><Status running={service.running} /><p>{service.description}</p>
         <p>Docker ID: {service.containerId || 'not found'}</p>

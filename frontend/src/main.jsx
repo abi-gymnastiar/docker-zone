@@ -31,7 +31,7 @@ function App() {
   if (user === undefined) return <div />
   if (!user) return <LoginPage onLogin={(loggedInUser) => { setUser(loggedInUser); refresh() }} />
   if (isAdmin && user.role === 'admin') return <AdminPage user={user} onLogout={() => api('/auth/logout', { method: 'POST' }).then(() => setUser(null))} message={message} setMessage={setMessage} />
-  if (serviceName) return <ServicePage service={service} serviceName={serviceName} onRefresh={refresh}
+  if (serviceName) return <ServicePage service={service} serviceName={serviceName} user={user} onRefresh={refresh}
     message={message} setMessage={setMessage} setService={setService} />
   const logout = () => api('/auth/logout', { method: 'POST' }).then(() => setUser(null))
   return <HomePage services={services} message={message} user={user} onLogout={logout}

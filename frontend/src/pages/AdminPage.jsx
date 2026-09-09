@@ -14,6 +14,7 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
   const [serviceList, setServiceList] = useState({ page: 1, pageSize: 5, total: 0 })
   const [search, setSearch] = useState('')
   const [editingService, setEditingService] = useState(null)
+  const requestedService = new URLSearchParams(location.search).get('service')
 
   const refresh = () => Promise.all([
     api('/admin/users'),
@@ -27,12 +28,19 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
         ...service,
         groups: service.groups || [],
         actions: service.actions || [],
+        iconUrl: service.iconUrl || 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg',
       })),
     })
     setServiceList(serviceResult)
   })
     .catch((error) => setMessage(error.message))
   useEffect(() => { refresh() }, [search, serviceList.page, serviceList.pageSize])
+  useEffect(() => {
+    if (requestedService && !editingService) {
+      const service = data.services.find((item) => item.name === requestedService)
+      if (service) setEditingService({ ...service, groups: service.groups.join(', ') })
+    }
+  }, [data.services, requestedService])
 
   const submitUser = (event) => {
     event.preventDefault()
@@ -60,7 +68,7 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
   }
   const saveService = (service, changes) => api('/admin/services', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...service, ...changes }),
+    body: JSON.stringify({ ...service, ...changes, groups: typeof service.groups === 'string' ? service.groups.split(',').map((group) => group.trim()).filter(Boolean) : service.groups }),
   }).then(() => { setMessage('Service settings saved.'); return refresh() }).catch((error) => setMessage(error.message))
   const syncServices = () => api('/admin/sync', { method: 'POST' })
     .then(() => { setMessage('Docker services synchronized.'); return refresh() })
@@ -88,14 +96,15 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
       <button>SAVE MEMBER</button>
     </form>{data.groups.map((group) => <p key={group.id}><b>{group.name}:</b> {group.members?.map((member) => `${member.username} (${member.role})`).join(', ') || 'empty'}</p>)}</section>
     <section className="panel"><h2>SERVICE CATALOG</h2><button onClick={syncServices}>SYNC DOCKER SERVICES</button><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="search discovered containers..." />{data.services.map((service) => <div className="service-assignment" key={service.name}>
-      <b>{service.name}</b><small>{service.container} {service.orphaned && '(ORPHANED)'}</small><button onClick={() => setEditingService({ ...service, groups: (service.groups || []).join(', ') })}>CONFIGURE CONTAINER</button>
+      <img src={service.iconUrl} alt="" /><div><b>{service.name}</b><small>{service.container} {service.orphaned && '(ORPHANED)'}</small></div><label><input type="checkbox" checked={service.enabled} onChange={(event) => saveService(service, { enabled: event.target.checked }).then(() => syncServices())} /> ENABLE FOR USERS</label><button onClick={() => setEditingService({ ...service, groups: (service.groups || []).join(', ') })}>CONFIGURE CONTAINER</button>
     </div>)}<Pagination page={serviceList.page} pageSize={serviceList.pageSize} total={serviceList.total} onChange={(page, pageSize) => setServiceList({ ...serviceList, page, pageSize })} /></section>
     {editingService && <div className="admin-modal"><div className="admin-modal-box"><h2>CONFIGURE {editingService.name}</h2>
       <input value={editingService.description} placeholder="description" onChange={(event) => setEditingService({ ...editingService, description: event.target.value })} />
       <input value={editingService.groups} placeholder="group-one, group-two" onChange={(event) => setEditingService({ ...editingService, groups: event.target.value })} />
       <label><input type="checkbox" checked={editingService.enabled} onChange={(event) => setEditingService({ ...editingService, enabled: event.target.checked })} /> ENABLE FOR USERS</label>
+      <input value={editingService.iconUrl} placeholder="icon URL" onChange={(event) => setEditingService({ ...editingService, iconUrl: event.target.value })} />
       <input value={(editingService.actions || []).join(', ')} placeholder="start, stop, restart" onChange={(event) => setEditingService({ ...editingService, actions: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} />
-      <button onClick={saveEditingService}>SAVE</button><button onClick={() => setEditingService(null)}>CANCEL</button>
+      <button onClick={() => saveEditingService().then(() => syncServices())}>SAVE</button><button onClick={() => setEditingService(null)}>CANCEL</button>
     </div></div>}
     <p className="message">{message}</p>
   </Layout>

@@ -349,7 +349,7 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "could not list service groups", http.StatusInternalServerError)
 				return
 			}
-			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, ContainerID: service.ContainerID, Description: service.Description, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
+			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, ContainerID: service.ContainerID, Description: service.Description, IconURL: service.IconURL, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
 		}
 		sort.Slice(result, func(i, j int) bool {
 			return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
@@ -360,6 +360,7 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 			Name        string   `json:"name"`
 			Groups      []string `json:"groups"`
 			Description string   `json:"description"`
+			IconURL     string   `json:"iconUrl"`
 			Enabled     bool     `json:"enabled"`
 			Actions     []string `json:"actions"`
 		}
@@ -371,7 +372,7 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err := s.auth.SetServiceMetadata(input.Name, input.Description, input.Enabled, input.Actions); err != nil {
+		if err := s.auth.SetServiceMetadata(input.Name, input.Description, input.IconURL, input.Enabled, input.Actions); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
