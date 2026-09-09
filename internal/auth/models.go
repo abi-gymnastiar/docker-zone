@@ -32,6 +32,7 @@ type GroupMember struct {
 type ServiceGroups struct {
 	Name        string   `json:"name"`
 	Container   string   `json:"container"`
+	ContainerID string   `json:"containerId"`
 	Description string   `json:"description"`
 	Actions     []string `json:"actions"`
 	Groups      []string `json:"groups"`

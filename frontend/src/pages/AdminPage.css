@@ -3,4 +3,7 @@
 .admin-grid input, .admin-grid select, .inline-form select, .service-assignment input { box-sizing: border-box; padding: 7px; font: inherit; border: 2px inset #fff; }
 .inline-form { grid-template-columns: repeat(4, 1fr); }
 .service-assignment { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; align-items: center; margin: 8px 0; }
+.admin-modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(0, 0, 0, .65); }
+.admin-modal-box { display: grid; gap: 10px; width: min(500px, calc(100% - 40px)); padding: 18px; background: #c0c0c0; border: 4px outset #fff; }
+.admin-modal-box input { padding: 8px; font: inherit; }
 @media (max-width: 650px) { .admin-grid, .inline-form { grid-template-columns: 1fr; } }

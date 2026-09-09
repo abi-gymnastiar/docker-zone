@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -104,6 +105,7 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 		unauthorized(w)
 		return
 	}
+	search := strings.ToLower(r.URL.Query().Get("search"))
 	result := make([]domain.Service, 0, len(s.services))
 	for _, config := range s.services {
 		if !config.Enabled && user.Role != "admin" {
@@ -122,6 +124,9 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 		if !allowed {
 			continue
 		}
+		if search != "" && !matchesService(config, search) {
+			continue
+		}
 		service, err := s.serviceStatus(config)
 		if err != nil {
 			http.Error(w, "docker status unavailable: "+err.Error(), http.StatusBadGateway)
@@ -129,7 +134,7 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 		}
 		result = append(result, service)
 	}
-	writeJSON(w, result)
+	writeJSON(w, paginate(result, r))
 }
 
 func (s *Server) handleService(w http.ResponseWriter, r *http.Request) {
@@ -331,14 +336,18 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		result := make([]auth.ServiceGroups, 0, len(s.services))
 		for _, service := range s.services {
+			search := strings.ToLower(r.URL.Query().Get("search"))
+			if search != "" && !matchesService(service, search) {
+				continue
+			}
 			groups, err := s.groupsFor(service)
 			if err != nil {
 				http.Error(w, "could not list service groups", http.StatusInternalServerError)
 				return
 			}
-			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, Description: service.Description, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
+			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, ContainerID: service.ContainerID, Description: service.Description, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
 		}
-		writeJSON(w, result)
+		writeJSON(w, paginate(result, r))
 	case http.MethodPut:
 		var input struct {
 			Name        string   `json:"name"`
@@ -402,6 +411,52 @@ func (s *Server) syncServices() error {
 
 func unauthorized(w http.ResponseWriter) {
 	http.Error(w, "not authenticated", http.StatusUnauthorized)
+}
+
+func matchesService(service domain.ServiceConfig, search string) bool {
+	return strings.Contains(strings.ToLower(service.Name), search) ||
+		strings.Contains(strings.ToLower(service.Container), search) ||
+		strings.Contains(strings.ToLower(service.Description), search) ||
+		strings.Contains(strings.ToLower(service.ContainerID), search)
+}
+
+func paginate(items any, r *http.Request) map[string]any {
+	page := queryInt(r, "page", 1)
+	pageSize := queryInt(r, "pageSize", 5)
+	if page < 1 {
+		page = 1
+	}
+	if pageSize != 5 && pageSize != 10 && pageSize != 20 && pageSize != 50 {
+		pageSize = 5
+	}
+	switch values := items.(type) {
+	case []domain.Service:
+		return pageResult(values, page, pageSize)
+	case []auth.ServiceGroups:
+		return pageResult(values, page, pageSize)
+	default:
+		return map[string]any{"items": []any{}, "page": page, "pageSize": pageSize, "total": 0}
+	}
+}
+
+func pageResult[T any](items []T, page, pageSize int) map[string]any {
+	start := (page - 1) * pageSize
+	if start > len(items) {
+		start = len(items)
+	}
+	end := start + pageSize
+	if end > len(items) {
+		end = len(items)
+	}
+	return map[string]any{"items": items[start:end], "page": page, "pageSize": pageSize, "total": len(items)}
+}
+
+func queryInt(r *http.Request, key string, fallback int) int {
+	value, err := strconv.Atoi(r.URL.Query().Get(key))
+	if err != nil {
+		return fallback
+	}
+	return value
 }
 
 func (s *Server) serviceStatus(config domain.ServiceConfig) (domain.Service, error) {
