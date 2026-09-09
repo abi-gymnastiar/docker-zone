@@ -5,7 +5,7 @@ A small, deliberately old-school dashboard for Docker services. Service metadata
 The backend is organized into:
 
 - `cmd/dashboard`: application entrypoint and environment wiring.
-- `internal/config`: YAML service configuration loading.
+- `internal/config`: server-wide YAML configuration loading.
 - `internal/domain`: service entities shared by the application layers.
 - `internal/docker`: Docker socket client/repository.
 - `internal/httpapi`: REST handlers and static frontend serving.
@@ -13,10 +13,11 @@ The backend is organized into:
 The frontend keeps pages, reusable components, and their component styles in
 separate files under [`frontend/src/`](./frontend/src/).
 
-Images and GIFs for the optional evil overlay belong in
-[`frontend/media/`](./frontend/media/). The frontend selects three of them at
-random each time the page loads and places them around the corners of the
-transparent overlay.
+The server creates `/data/config.yml` on first startup. Edit that file on the
+host to change the title, icon, headings, footer, and optional evil overlay.
+Changes are picked up automatically. Evil image entries may be external URLs
+or files under `/data`; local files are served through a restricted media
+endpoint.
 
 ## Run with Docker Compose
 
@@ -47,16 +48,38 @@ settings are documented in [`.env.example`](./.env.example):
 - `ADMIN_USERNAME` and `ADMIN_PASSWORD` bootstrap the first administrator.
 - `DATABASE_DIR` sets the host directory containing the SQLite database.
 - `DATABASE_PATH` sets the SQLite database path inside the container.
+- `CONFIG_PATH` sets the server-wide YAML configuration path inside the
+  container.
+
+The dashboard background color and image URLs are personal browser settings
+available from the homepage and are stored in local storage. The evil overlay
+is hidden by default for each new browser and its toggle is also persisted
+locally.
+
+Example `config.yml`:
+
+```yaml
+web:
+  title: My Docker Zone
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg
+  header: "★ MY DOCKER ZONE ★"
+  subheader: tiny control panel / very serious technology
+  footer: "docker zone, Developed by Jimi - with love <3"
+evil:
+  images:
+    - https://example.com/evil.gif
+    - /data/evil/local-image.png
+```
+
+Omit the `evil` section to hide the evil button entirely.
 
 The first administrator is created only when the database has no users. Change
 the example password before deploying. Authentication uses server-side sessions
-in secure HTTP-only cookies. Services are protected by group membership and
-role permissions; the Minecraft service belongs to the `minecraft` group.
+in secure HTTP-only cookies. Services are protected by group membership and role permissions.
 
 Administrators can open `/admin` to create users and groups, assign users to
 groups with `viewer`, `log_viewer`, or `operator` roles, and assign services to
-groups. Service assignments are stored in SQLite; YAML groups provide the
-initial defaults.
+groups. Service assignments are stored in SQLite.
 
 The dashboard discovers all Docker containers, including stopped containers.
 Newly discovered containers are disabled for regular users until an admin

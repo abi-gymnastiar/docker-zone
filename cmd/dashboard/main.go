@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"dashboard/internal/auth"
+	"dashboard/internal/config"
 	"dashboard/internal/docker"
 	"dashboard/internal/domain"
 	"dashboard/internal/httpapi"
@@ -33,6 +34,14 @@ func main() {
 	if err := repo.Bootstrap(adminUsername, adminPassword); err != nil {
 		log.Fatal(err)
 	}
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "/data/config.yml"
+	}
+	appConfig, err := config.New(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	socket := os.Getenv("DOCKER_SOCKET")
 	if socket == "" {
@@ -54,7 +63,7 @@ func main() {
 	for _, service := range storedServices {
 		services[service.Name] = service
 	}
-	server := httpapi.NewServer(services, dockerClient, authUseCase, "frontend/dist")
+	server := httpapi.NewServer(services, dockerClient, authUseCase, appConfig, "frontend/dist")
 	addr := os.Getenv("LISTEN_ADDR")
 	if addr == "" {
 		addr = ":8080"
