@@ -257,7 +257,7 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request, config dom
 	if body.Action == "restart" {
 		endpoint = "/containers/" + config.Container + "/restart?t=5"
 	}
-	s.proxyDocker(w, r, endpoint)
+	s.proxyDockerBody(w, r.Method, endpoint, http.NoBody)
 }
 
 func (s *Server) requirePermission(w http.ResponseWriter, user auth.User, config domain.ServiceConfig, permission string) bool {
@@ -522,7 +522,11 @@ func (s *Server) serviceStatus(config domain.ServiceConfig) (domain.Service, err
 }
 
 func (s *Server) proxyDocker(w http.ResponseWriter, r *http.Request, endpoint string) {
-	resp, err := s.docker.Proxy(r.Method, endpoint, r.Body)
+	s.proxyDockerBody(w, r.Method, endpoint, r.Body)
+}
+
+func (s *Server) proxyDockerBody(w http.ResponseWriter, method, endpoint string, body io.Reader) {
+	resp, err := s.docker.Proxy(method, endpoint, body)
 	if err != nil {
 		http.Error(w, "docker socket unavailable: "+err.Error(), http.StatusBadGateway)
 		return
