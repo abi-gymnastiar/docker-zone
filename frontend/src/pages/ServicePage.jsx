@@ -32,7 +32,7 @@ export default function ServicePage({ service, serviceName, user, onRefresh, mes
   return <Layout>
     <header><a href="/">◄ BACK TO CONTROL PANEL</a>{user?.role === 'admin' && <a className="admin-link" href={`/admin?service=${encodeURIComponent(serviceName)}`}>CONFIGURE CONTAINER</a>}<h1>{service?.name || serviceName}</h1></header>
     <section className="panel"><h2>CONTAINER STATUS</h2>
-      {service ? <><Status running={service.running} /><button onClick={toggleFavorite}>{favorite ? 'REMOVE FROM FAVORITE' : 'ADD TO FAVORITE'}</button><p>{service.description}</p>
+      {service ? <><Status running={service.running} /><button className="favorite-action" onClick={toggleFavorite}>{favorite ? 'REMOVE FROM FAVORITE' : 'ADD TO FAVORITE'}</button><p>{service.description}</p>
         <p>Docker ID: {service.containerId || 'not found'}</p>
         <ActionButtons actions={service.actions} running={service.running} onAction={runAction} onLogs={loadLogs} />
       </> : <p>Loading service...</p>}

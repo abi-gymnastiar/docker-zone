@@ -11,6 +11,7 @@ export default function HomePage({ services, message, user, onLogout, page, page
   const [config, setConfig] = useState(null)
   const [background, setBackground] = useBackground()
   const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('dashboard-favorites') || '[]'))
+  const [favoriteServices, setFavoriteServices] = useState([])
   useEffect(() => {
     api('/config').then(value => {
       setConfig(value)
@@ -28,15 +29,20 @@ export default function HomePage({ services, message, user, onLogout, page, page
       window.removeEventListener('storage', syncFavorites)
     }
   }, [])
-  const favoriteServices = services.filter(service => favorites.includes(service.name))
-  const regularServices = services.filter(service => !favorites.includes(service.name))
+  useEffect(() => {
+    let active = true
+    Promise.all(favorites.map(name => api(`/services/${encodeURIComponent(name)}`)))
+      .then(result => active && setFavoriteServices(result))
+      .catch(() => active && setFavoriteServices([]))
+    return () => { active = false }
+  }, [favorites])
   const card = service => <ServiceCard service={service} key={service.name} />
   const updateImages = value => setBackground({ ...background, images: value.split(',').map(item => item.trim()).filter(Boolean) })
   const web = config?.web || {}
   return <Layout>
     <header><h1>{web.header || '★ MY DOCKER ZONE ★'}</h1><p>{web.subheader || 'tiny control panel / very serious technology'}</p><p>logged in as {user.username} ({user.role}) {user.role === 'admin' && <a href="/admin">[ ADMIN MACHINE ]</a>} <button onClick={onLogout}>LOG OUT</button> <button onClick={() => setSettingsOpen(true)}>BACKGROUND SETTINGS</button></p></header>
     <section className="panel">{favoriteServices.length > 0 && <><h2>FAVORITED CONTAINERS</h2>{favoriteServices.map(card)}</>}<h2>CONTAINERS</h2><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="search services..." />
-      {regularServices.map(card)}
+      {services.map(card)}
       {!services.length && <p>No configured services found.</p>}
       <Pagination page={page} pageSize={pageSize} total={total} onChange={onPageChange} />
     </section>
