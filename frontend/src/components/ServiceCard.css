@@ -1,3 +1,5 @@
-.service { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; padding: 12px; margin: 8px 0; background: #fff; border: 2px inset #fff; text-decoration: none; }
+.service { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 12px; margin: 8px 0; background: #fff; border: 2px inset #fff; }
+.service-link { display: grid; grid-template-columns: 48px 1fr; gap: 10px; align-items: center; text-decoration: none; }
 .service img { width: 42px; height: 42px; object-fit: contain; }
 .service small { display: block; margin-top: 4px; color: #333; }
+.favorite-button { min-width: 34px; padding: 4px; color: #900; font-size: 22px; background: #eee; border: 2px outset #fff; cursor: pointer; }

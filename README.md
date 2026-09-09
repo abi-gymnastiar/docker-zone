@@ -56,6 +56,14 @@ available from the homepage and are stored in local storage. The evil overlay
 is hidden by default for each new browser and its toggle is also persisted
 locally.
 
+Compose can provide a default client background for browsers without saved
+preferences using `DEFAULT_BACKGROUND_IMAGE` and `DEFAULT_BACKGROUND_SCALE`
+(`tile`, `stretch`, or `zoom`). These defaults do not overwrite existing
+browser preferences.
+
+Service favorites are also stored in each browser's local storage. Favorited
+services appear in a separate section above the regular container list.
+
 Example `config.yml`:
 
 ```yaml

@@ -12,11 +12,13 @@ import (
 )
 
 type Web struct {
-	Title     string `yaml:"title" json:"title"`
-	Icon      string `yaml:"icon" json:"icon"`
-	Header    string `yaml:"header" json:"header"`
-	Subheader string `yaml:"subheader" json:"subheader"`
-	Footer    string `yaml:"footer" json:"footer"`
+	Title           string `yaml:"title" json:"title"`
+	Icon            string `yaml:"icon" json:"icon"`
+	Header          string `yaml:"header" json:"header"`
+	Subheader       string `yaml:"subheader" json:"subheader"`
+	Footer          string `yaml:"footer" json:"footer"`
+	BackgroundImage string `yaml:"backgroundImage,omitempty" json:"backgroundImage,omitempty"`
+	BackgroundScale string `yaml:"backgroundScale,omitempty" json:"backgroundScale,omitempty"`
 }
 
 type Evil struct {
@@ -129,11 +131,12 @@ func (m *Manager) reload() error {
 func defaults() Config {
 	value := Config{
 		Web: Web{
-			Title:     "My Docker Zone",
-			Icon:      "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg",
-			Header:    "★ MY DOCKER ZONE ★",
-			Subheader: "tiny control panel / very serious technology",
-			Footer:    "docker zone, Developed by Jimi - with love <3",
+			Title:           "My Docker Zone",
+			Icon:            "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg",
+			Header:          "★ MY DOCKER ZONE ★",
+			Subheader:       "tiny control panel / very serious technology",
+			Footer:          "docker zone, Developed by Jimi - with love <3",
+			BackgroundScale: "tile",
 		},
 	}
 	if env := os.Getenv("WEB_TITLE"); env != "" {
@@ -151,6 +154,12 @@ func defaults() Config {
 	if env := os.Getenv("WEB_FOOTER"); env != "" {
 		value.Web.Footer = env
 	}
+	if env := os.Getenv("DEFAULT_BACKGROUND_IMAGE"); env != "" {
+		value.Web.BackgroundImage = env
+	}
+	if env := os.Getenv("DEFAULT_BACKGROUND_SCALE"); env != "" {
+		value.Web.BackgroundScale = env
+	}
 	return value
 }
 
@@ -167,6 +176,12 @@ func normalize(value Config) Config {
 	}
 	if strings.TrimSpace(value.Web.Footer) == "" {
 		value.Web.Footer = fallback.Web.Footer
+	}
+	if strings.TrimSpace(value.Web.BackgroundImage) == "" {
+		value.Web.BackgroundImage = fallback.Web.BackgroundImage
+	}
+	if value.Web.BackgroundScale != "tile" && value.Web.BackgroundScale != "stretch" && value.Web.BackgroundScale != "zoom" {
+		value.Web.BackgroundScale = fallback.Web.BackgroundScale
 	}
 	return value
 }

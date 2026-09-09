@@ -10,13 +10,26 @@ export default function HomePage({ services, message, user, onLogout, page, page
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [config, setConfig] = useState(null)
   const [background, setBackground] = useBackground()
-  useEffect(() => { api('/config').then(setConfig).catch(() => {}) }, [])
+  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('dashboard-favorites') || '[]'))
+  useEffect(() => {
+    api('/config').then(value => {
+      setConfig(value)
+      if (!localStorage.getItem('dashboard-background') && value.web?.backgroundImage) {
+        setBackground({ ...background, images: [value.web.backgroundImage], scale: value.web.backgroundScale || 'tile' })
+      }
+    }).catch(() => {})
+  }, [])
+  useEffect(() => { localStorage.setItem('dashboard-favorites', JSON.stringify(favorites)) }, [favorites])
+  const toggleFavorite = name => setFavorites(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name])
+  const favoriteServices = services.filter(service => favorites.includes(service.name))
+  const regularServices = services.filter(service => !favorites.includes(service.name))
+  const card = service => <ServiceCard service={service} favorite={favorites.includes(service.name)} onToggleFavorite={toggleFavorite} key={service.name} />
   const updateImages = value => setBackground({ ...background, images: value.split(',').map(item => item.trim()).filter(Boolean) })
   const web = config?.web || {}
   return <Layout>
     <header><h1>{web.header || '★ MY DOCKER ZONE ★'}</h1><p>{web.subheader || 'tiny control panel / very serious technology'}</p><p>logged in as {user.username} ({user.role}) {user.role === 'admin' && <a href="/admin">[ ADMIN MACHINE ]</a>} <button onClick={onLogout}>LOG OUT</button> <button onClick={() => setSettingsOpen(true)}>BACKGROUND SETTINGS</button></p></header>
-    <section className="panel"><h2>CONTAINERS</h2><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="search services..." />
-      {services.map((service) => <ServiceCard service={service} key={service.name} />)}
+    <section className="panel">{favoriteServices.length > 0 && <><h2>FAVORITED CONTAINERS</h2>{favoriteServices.map(card)}</>}<h2>CONTAINERS</h2><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="search services..." />
+      {regularServices.map(card)}
       {!services.length && <p>No configured services found.</p>}
       <Pagination page={page} pageSize={pageSize} total={total} onChange={onPageChange} />
     </section>
