@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -134,6 +135,9 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 		}
 		result = append(result, service)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
+	})
 	writeJSON(w, paginate(result, r))
 }
 
@@ -347,6 +351,9 @@ func (s *Server) handleAdminServices(w http.ResponseWriter, r *http.Request) {
 			}
 			result = append(result, auth.ServiceGroups{Name: service.Name, Container: service.Container, ContainerID: service.ContainerID, Description: service.Description, Actions: service.Actions, Groups: groups, Enabled: service.Enabled, Orphaned: service.Orphaned})
 		}
+		sort.Slice(result, func(i, j int) bool {
+			return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
+		})
 		writeJSON(w, paginate(result, r))
 	case http.MethodPut:
 		var input struct {

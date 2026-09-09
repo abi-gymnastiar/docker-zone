@@ -19,15 +19,18 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
     api('/admin/users'),
     api('/admin/groups'),
     getPage('/admin/services', { page: serviceList.page, pageSize: serviceList.pageSize, search }),
-  ]).then(([users, groups, serviceResult]) => setData({
-    users: users || [],
-    groups: groups || [],
-    services: (serviceResult.items || []).map((service) => ({
-      ...service,
-      groups: service.groups || [],
-      actions: service.actions || [],
-    })),
-  })); setServiceList(serviceResult)
+  ]).then(([users, groups, serviceResult]) => {
+    setData({
+      users: users || [],
+      groups: groups || [],
+      services: (serviceResult.items || []).map((service) => ({
+        ...service,
+        groups: service.groups || [],
+        actions: service.actions || [],
+      })),
+    })
+    setServiceList(serviceResult)
+  })
     .catch((error) => setMessage(error.message))
   useEffect(() => { refresh() }, [search, serviceList.page, serviceList.pageSize])
 
