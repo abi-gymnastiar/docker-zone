@@ -1,0 +1,4 @@
+.login-panel { max-width: 430px; margin: 80px auto; text-align: center; }
+.login-panel form { display: grid; gap: 14px; text-align: left; }
+.login-panel label { display: grid; gap: 4px; font-weight: bold; }
+.login-panel input { box-sizing: border-box; padding: 8px; border: 2px inset #fff; font: inherit; }

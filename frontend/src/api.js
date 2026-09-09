@@ -11,3 +11,9 @@ export function getLogs(serviceName) {
     return response.text()
   })
 }
+
+export function getPage(path, { page, pageSize, search = '' }) {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  if (search) params.set('search', search)
+  return api(`${path}?${params}`)
+}

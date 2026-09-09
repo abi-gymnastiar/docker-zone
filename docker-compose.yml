@@ -7,6 +7,13 @@ services:
     environment:
       LISTEN_ADDR: "${LISTEN_ADDR:-:8080}"
       DOCKER_SOCKET: "${DOCKER_SOCKET:-/var/run/docker.sock}"
+      DATABASE_PATH: "${DATABASE_PATH:-/data/dashboard.db}"
+      ADMIN_USERNAME: "${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}"
     volumes:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${DATABASE_DIR:-./data}:/data
     restart: unless-stopped
+
+volumes:
+  dashboard-data:

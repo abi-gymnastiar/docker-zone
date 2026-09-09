@@ -1,7 +1,6 @@
 # My Docker Zone
 
-A small, deliberately old-school dashboard for Docker services. Service metadata and
-available actions live in individual YAML files under [`services/`](./services/).
+A small, deliberately old-school dashboard for Docker services. Service metadata is managed by administrators and stored in SQLite.
 
 The backend is organized into:
 
@@ -45,6 +44,39 @@ settings are documented in [`.env.example`](./.env.example):
 - `DASHBOARD_PORT` controls the host port.
 - `LISTEN_ADDR` controls the address inside the container.
 - `DOCKER_SOCKET` sets the host Docker socket path.
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` bootstrap the first administrator.
+- `DATABASE_DIR` sets the host directory containing the SQLite database.
+- `DATABASE_PATH` sets the SQLite database path inside the container.
+
+The first administrator is created only when the database has no users. Change
+the example password before deploying. Authentication uses server-side sessions
+in secure HTTP-only cookies. Services are protected by group membership and
+role permissions; the Minecraft service belongs to the `minecraft` group.
+
+Administrators can open `/admin` to create users and groups, assign users to
+groups with `viewer`, `log_viewer`, or `operator` roles, and assign services to
+groups. Service assignments are stored in SQLite; YAML groups provide the
+initial defaults.
+
+The dashboard discovers all Docker containers, including stopped containers.
+Newly discovered containers are disabled for regular users until an admin
+configures them. The `SYNC DOCKER SERVICES` button and startup synchronization
+refresh the catalog. Removed containers remain as orphaned SQLite records.
+
+SQLite is an embedded database, not a network database server, so there is no
+database port to expose. The database is stored in `DATABASE_DIR` on the host.
+To inspect it with DBeaver, stop the dashboard first, copy the file to your
+workstation over SSH, and open the copy as a SQLite database:
+
+```sh
+docker compose stop dashboard
+scp your-server:/path/to/project/data/dashboard.db ./dashboard.db
+docker compose start dashboard
+```
+
+Do not edit a live SQLite file from another machine. For a live remote database
+connection, migrate to PostgreSQL later or add a deliberately authenticated
+database administration service instead of exposing the SQLite file.
 
 The Docker socket grants the dashboard broad control over the host Docker
 daemon. Keep this service on a trusted network and do not expose port 8080
@@ -65,7 +97,9 @@ directly to the public internet.
 3. Start the dashboard:
 
    ```sh
-   go run .
+   export ADMIN_USERNAME=admin
+   export ADMIN_PASSWORD=change-this-password
+   go run ./cmd/dashboard
    ```
 
 Open <http://localhost:8080>. The process needs permission to access
