@@ -15,7 +15,15 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
     api('/admin/users'),
     api('/admin/groups'),
     api('/admin/services'),
-  ]).then(([users, groups, services]) => setData({ users, groups, services }))
+  ]).then(([users, groups, services]) => setData({
+    users: users || [],
+    groups: groups || [],
+    services: (services || []).map((service) => ({
+      ...service,
+      groups: service.groups || [],
+      actions: service.actions || [],
+    })),
+  }))
     .catch((error) => setMessage(error.message))
   useEffect(() => { refresh() }, [])
 
@@ -71,9 +79,9 @@ export default function AdminPage({ user, onLogout, message, setMessage }) {
     <section className="panel"><h2>SERVICE CATALOG</h2><button onClick={syncServices}>SYNC DOCKER SERVICES</button>{data.services.map((service) => <div className="service-assignment" key={service.name}>
       <b>{service.name}</b><small>{service.container} {service.orphaned && '(ORPHANED)'}</small>
       <input defaultValue={service.description} placeholder="description" onBlur={(event) => saveService(service, { description: event.target.value })} />
-      <input defaultValue={service.groups.join(', ')} placeholder="group-one, group-two" onBlur={(event) => saveServiceGroups(service, event.target.value)} />
+      <input defaultValue={(service.groups || []).join(', ')} placeholder="group-one, group-two" onBlur={(event) => saveServiceGroups(service, event.target.value)} />
       <label><input type="checkbox" defaultChecked={service.enabled} onChange={(event) => saveService(service, { enabled: event.target.checked })} /> ENABLE FOR USERS</label>
-      <small>Actions: {service.actions.join(', ')}</small>
+      <small>Actions: {(service.actions || []).join(', ')}</small>
     </div>)}</section>
     <p className="message">{message}</p>
   </Layout>

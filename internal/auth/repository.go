@@ -93,7 +93,7 @@ func (r *Repository) ListServices() ([]domain.ServiceConfig, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var services []domain.ServiceConfig
+	services := make([]domain.ServiceConfig, 0)
 	for rows.Next() {
 		var service domain.ServiceConfig
 		var actions string
@@ -174,7 +174,7 @@ func (r *Repository) ListUsers() ([]AdminUser, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var users []AdminUser
+	users := make([]AdminUser, 0)
 	for rows.Next() {
 		var user AdminUser
 		if err := rows.Scan(&user.ID, &user.Username, &user.Role); err != nil {
@@ -203,7 +203,7 @@ func (r *Repository) ListGroups() ([]AdminGroup, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var groups []AdminGroup
+	groups := make([]AdminGroup, 0)
 	for rows.Next() {
 		var group AdminGroup
 		if err := rows.Scan(&group.ID, &group.Name); err != nil {
@@ -225,7 +225,7 @@ func (r *Repository) groupMembers(groupID int64) ([]GroupMember, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var members []GroupMember
+	members := make([]GroupMember, 0)
 	for rows.Next() {
 		var member GroupMember
 		if err := rows.Scan(&member.UserID, &member.Username, &member.Role); err != nil {
