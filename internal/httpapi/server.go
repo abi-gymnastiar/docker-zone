@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"dashboard/internal/auth"
+	"dashboard/internal/config"
 	"dashboard/internal/docker"
 	"dashboard/internal/domain"
 )
@@ -21,11 +22,12 @@ type Server struct {
 	services map[string]domain.ServiceConfig
 	docker   *docker.Client
 	auth     *auth.UseCase
+	config   *config.Manager
 	static   string
 }
 
-func NewServer(services map[string]domain.ServiceConfig, dockerClient *docker.Client, authUseCase *auth.UseCase, static string) *Server {
-	return &Server{services: services, docker: dockerClient, auth: authUseCase, static: static}
+func NewServer(services map[string]domain.ServiceConfig, dockerClient *docker.Client, authUseCase *auth.UseCase, appConfig *config.Manager, static string) *Server {
+	return &Server{services: services, docker: dockerClient, auth: authUseCase, config: appConfig, static: static}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -34,6 +36,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/auth/login", s.handleLogin)
 	mux.HandleFunc("/api/auth/logout", s.handleLogout)
 	mux.HandleFunc("/api/auth/me", s.handleMe)
+	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/config/media", s.handleConfigMedia)
 	mux.HandleFunc("/api/admin/users", s.handleAdminUsers)
 	mux.HandleFunc("/api/admin/groups", s.handleAdminGroups)
 	mux.HandleFunc("/api/admin/services", s.handleAdminServices)
@@ -42,6 +46,43 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/services/", s.handleService)
 	mux.HandleFunc("/", s.handleFrontend)
 	return logging(mux)
+}
+
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.NotFound(w, r)
+		return
+	}
+	value, err := s.config.Current()
+	if err != nil {
+		http.Error(w, "configuration unavailable", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, value)
+}
+
+func (s *Server) handleConfigMedia(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.NotFound(w, r)
+		return
+	}
+	requested := r.URL.Query().Get("path")
+	root, err := filepath.Abs("/data")
+	if err != nil {
+		http.Error(w, "media unavailable", http.StatusInternalServerError)
+		return
+	}
+	file, err := filepath.Abs(requested)
+	if err != nil || (file != root && !strings.HasPrefix(file, root+string(os.PathSeparator))) {
+		http.Error(w, "media path must be inside /data", http.StatusForbidden)
+		return
+	}
+	info, err := os.Stat(file)
+	if err != nil || info.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, file)
 }
 
 func health(w http.ResponseWriter, _ *http.Request) {
@@ -216,7 +257,7 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request, config dom
 	if body.Action == "restart" {
 		endpoint = "/containers/" + config.Container + "/restart?t=5"
 	}
-	s.proxyDocker(w, r, endpoint)
+	s.proxyDockerBody(w, r.Method, endpoint, http.NoBody)
 }
 
 func (s *Server) requirePermission(w http.ResponseWriter, user auth.User, config domain.ServiceConfig, permission string) bool {
@@ -481,7 +522,11 @@ func (s *Server) serviceStatus(config domain.ServiceConfig) (domain.Service, err
 }
 
 func (s *Server) proxyDocker(w http.ResponseWriter, r *http.Request, endpoint string) {
-	resp, err := s.docker.Proxy(r.Method, endpoint, r.Body)
+	s.proxyDockerBody(w, r.Method, endpoint, r.Body)
+}
+
+func (s *Server) proxyDockerBody(w http.ResponseWriter, method, endpoint string, body io.Reader) {
+	resp, err := s.docker.Proxy(method, endpoint, body)
 	if err != nil {
 		http.Error(w, "docker socket unavailable: "+err.Error(), http.StatusBadGateway)
 		return
