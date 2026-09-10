@@ -1,7 +1,0 @@
-name: minecraft-server
-container: minecraft-server
-description: A Minecraft server running in Docker
-actions:
-  - start
-  - stop
-  - restart

@@ -1,0 +1,2 @@
+.pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pagination select { padding: 5px; font: inherit; }
