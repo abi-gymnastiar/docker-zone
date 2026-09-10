@@ -131,11 +131,11 @@ func (m *Manager) reload() error {
 func defaults() Config {
 	value := Config{
 		Web: Web{
-			Title:           "My Docker Zone",
+			Title:           "Docker Zone",
 			Icon:            "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/linux.svg",
-			Header:          "★ MY DOCKER ZONE ★",
+			Header:          "★ DOCKER ZONE ★",
 			Subheader:       "tiny control panel / very serious technology",
-			Footer:          "docker zone, Developed by Jimi - with love <3",
+			Footer:          "Developed by Jimi - with love <3",
 			BackgroundScale: "tile",
 		},
 	}
